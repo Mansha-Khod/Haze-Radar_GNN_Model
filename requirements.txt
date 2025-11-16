@@ -4,13 +4,14 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
 
-# PyTorch first (base installation)
-torch==2.1.2
-torchvision==0.16.2
-torchaudio==2.1.2
+# PyTorch with CUDA support for Railway
+torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+torchaudio==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
 
-# PyTorch Geometric and dependencies
+# PyTorch Geometric with pre-built wheels
 torch-geometric==2.4.0
+-f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
 # Data processing
 pandas==2.1.3
