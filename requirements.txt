@@ -4,14 +4,17 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 python-multipart==0.0.6
 
-# PyTorch with CUDA support for Railway
-torch==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
-torchvision==0.16.2+cu121 --index-url https://download.pytorch.org/whl/cu121
-torchaudio==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+# PyTorch CPU-only (for Railway - no GPU)
+torch==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cpu
+torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
 
-# PyTorch Geometric with pre-built wheels
+# PyTorch Geometric with CPU support
 torch-geometric==2.4.0
--f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+torch-scatter==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+torch-sparse==0.6.18 --index-url https://download.pytorch.org/whl/cpu
+torch-cluster==1.6.3 --index-url https://download.pytorch.org/whl/cpu
+torch-spline-conv==1.2.2 --index-url https://download.pytorch.org/whl/cpu
 
 # Data processing
 pandas==2.1.3
