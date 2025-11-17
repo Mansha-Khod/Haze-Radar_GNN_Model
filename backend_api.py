@@ -93,44 +93,94 @@ class ForecastResponse(BaseModel):
 
 
 # Utility functions
+# Add this to the beginning of your backend_api.py, replacing the initialize_model function
+
 def initialize_model():
     """Load trained model and configuration"""
     global MODEL, FEATURE_ENGINEER, MODEL_CONFIG, SUPABASE_CLIENT
     
-    model_path = os.getenv('MODEL_PATH', 'models/best_haze_model.pth')
-    config_path = os.getenv('CONFIG_PATH', 'models/model_config.json')
+    model_path = os.getenv('MODEL_PATH', 'deployment_model.pth')
+    config_path = os.getenv('CONFIG_PATH', 'model_config_fixed.json')
+    
+    print(f"Looking for model at: {model_path}")
+    print(f"Looking for config at: {config_path}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Files in current directory: {os.listdir('.')}")
+    
+    # Check if files exist
+    if not os.path.exists(model_path):
+        print(f"ERROR: Model file not found at {model_path}")
+        print("Available files:", os.listdir('.'))
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+    
+    if not os.path.exists(config_path):
+        print(f"ERROR: Config file not found at {config_path}")
+        print("Available files:", os.listdir('.'))
+        raise FileNotFoundError(f"Config file not found: {config_path}")
     
     # Load config
-    with open(config_path, 'r') as f:
-        MODEL_CONFIG = json.load(f)
+    try:
+        with open(config_path, 'r') as f:
+            MODEL_CONFIG = json.load(f)
+        print(f"✓ Config loaded successfully")
+    except Exception as e:
+        print(f"ERROR loading config: {e}")
+        raise
     
     # Initialize model
-    MODEL = SpatioTemporalHazeGNN(
-        node_features=MODEL_CONFIG['num_features'],
-        edge_features=1,
-        hidden_dim=64,
-        num_heads=4,
-        lstm_layers=2,
-        dropout=0.0  # No dropout for inference
-    ).to(DEVICE)
+    try:
+        MODEL = SpatioTemporalHazeGNN(
+            node_features=MODEL_CONFIG['num_features'],
+            edge_features=1,
+            hidden_dim=64,
+            num_heads=4,
+            lstm_layers=2,
+            dropout=0.0  # No dropout for inference
+        ).to(DEVICE)
+        print(f"✓ Model architecture initialized")
+    except Exception as e:
+        print(f"ERROR initializing model architecture: {e}")
+        raise
     
     # Load weights
-    checkpoint = torch.load(model_path, map_location=DEVICE)
-    MODEL.load_state_dict(checkpoint['model_state_dict'])
-    MODEL.eval()
+    try:
+        checkpoint = torch.load(model_path, map_location=DEVICE)
+        MODEL.load_state_dict(checkpoint['model_state_dict'])
+        MODEL.eval()
+        print(f"✓ Model weights loaded")
+    except Exception as e:
+        print(f"ERROR loading model weights: {e}")
+        raise
     
     # Initialize feature engineer
-    FEATURE_ENGINEER = FeatureEngineering()
+    try:
+        FEATURE_ENGINEER = FeatureEngineering()
+        print(f"✓ Feature engineer initialized")
+    except Exception as e:
+        print(f"ERROR initializing feature engineer: {e}")
+        raise
     
     # Initialize Supabase
     supabase_url = os.getenv('SUPABASE_URL')
     supabase_key = os.getenv('SUPABASE_KEY')
-    if supabase_url and supabase_key:
-        SUPABASE_CLIENT = create_client(supabase_url, supabase_key)
     
-    print(f"Model loaded successfully on {DEVICE}")
-    print(f"Test metrics - MAE: {MODEL_CONFIG['test_metrics']['mae']:.2f}, R²: {MODEL_CONFIG['test_metrics']['r2']:.3f}")
-
+    if supabase_url and supabase_key:
+        try:
+            SUPABASE_CLIENT = create_client(supabase_url, supabase_key)
+            print(f"✓ Supabase connected")
+        except Exception as e:
+            print(f"WARNING: Supabase connection failed: {e}")
+    else:
+        print("WARNING: Supabase credentials not provided")
+    
+    print(f"\n{'='*60}")
+    print(f"MODEL LOADED SUCCESSFULLY")
+    print(f"{'='*60}")
+    print(f"Device: {DEVICE}")
+    print(f"Test MAE: {MODEL_CONFIG.get('test_metrics', {}).get('mae', 'N/A'):.2f}")
+    print(f"Test R²: {MODEL_CONFIG.get('test_metrics', {}).get('r2', 'N/A'):.3f}")
+    print(f"Features: {MODEL_CONFIG.get('num_features', 'N/A')}")
+    print(f"{'='*60}\n")
 
 def pm25_to_aqi(pm25):
     """Convert PM2.5 to AQI using EPA formula"""
