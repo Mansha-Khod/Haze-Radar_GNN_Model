@@ -13,7 +13,32 @@ from supabase import create_client, Client
 # Import our models
 from improved_gnn_model import SpatioTemporalHazeGNN, HazeHorizonSimulator, DynamicGraphBuilder
 from training_pipeline import FeatureEngineering
+# Add this RIGHT AFTER the imports (around line 15) and BEFORE the FastAPI app
 
+class SimpleFeatureEngineer:
+    def engineer_all_features(self, df, create_lags=False):
+        """Basic feature engineering that works without training_pipeline"""
+        import pandas as pd
+        import numpy as np
+        
+        # Create basic time features
+        if 'timestamp' in df.columns:
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            df['hour'] = df['timestamp'].dt.hour
+            df['day_of_year'] = df['timestamp'].dt.dayofyear
+        
+        # Create wind vector components
+        df['wind_u'] = -df['wind_speed'] * np.sin(np.radians(df['wind_direction']))
+        df['wind_v'] = -df['wind_speed'] * np.cos(np.radians(df['wind_direction']))
+        
+        # Basic interactions
+        df['temp_humidity'] = df['temperature'] * df['humidity'] / 100
+        df['fire_wind'] = df['upwind_fire_count'] * df['wind_speed']
+        
+        return df
+
+# Initialize the feature engineer globally
+FEATURE_ENGINEER = SimpleFeatureEngineer()
 # Initialize FastAPI
 app = FastAPI(
     title="HazeRadar API",
