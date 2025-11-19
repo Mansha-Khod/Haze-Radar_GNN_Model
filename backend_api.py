@@ -13,7 +13,7 @@ from supabase import create_client, Client
 # Import our models
 from improved_gnn_model import SpatioTemporalHazeGNN, HazeHorizonSimulator, DynamicGraphBuilder
 from training_pipeline import FeatureEngineering
-# Add this RIGHT AFTER the imports (around line 15) and BEFORE the FastAPI app
+
 
 class SimpleFeatureEngineer:
     def engineer_all_features(self, df, create_lags=False):
@@ -117,7 +117,7 @@ class ForecastResponse(BaseModel):
     summary: Dict[str, Any]
 
 
-# Utility functions
+
 def initialize_model():
     """Load trained model and configuration"""
     global MODEL, FEATURE_ENGINEER, MODEL_CONFIG, SUPABASE_CLIENT
@@ -165,46 +165,19 @@ def initialize_model():
         print(f"ERROR initializing model architecture: {e}")
         raise
     
-    # Load weights with version compatibility fix
+    # Load weights
     try:
-        checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)
-        
-        # Fix for PyG version mismatch in GAT layers
-        state_dict = checkpoint['model_state_dict']
-        new_state_dict = {}
-        
-        for key, value in state_dict.items():
-            # Fix GAT layer parameter names
-            if key == "gat1.lin.weight":
-                new_state_dict["gat1.lin_src.weight"] = value
-                new_state_dict["gat1.lin_dst.weight"] = value.clone()
-            elif key == "gat2.lin.weight":
-                new_state_dict["gat2.lin_src.weight"] = value
-                new_state_dict["gat2.lin_dst.weight"] = value.clone()
-            else:
-                new_state_dict[key] = value
-        
-        # Load the fixed state dict
-        MODEL.load_state_dict(new_state_dict, strict=False)
-        print(f"✓ Model weights loaded (with version compatibility fix)")
-        
+        checkpoint = torch.load(model_path, map_location=DEVICE)
+        MODEL.load_state_dict(checkpoint['model_state_dict'])
+        MODEL.eval()
+        print(f"✓ Model weights loaded")
     except Exception as e:
         print(f"ERROR loading model weights: {e}")
-        print("Trying alternative loading approach...")
-        
-        # Alternative: Load with strict=False to ignore mismatches
-        try:
-            MODEL.load_state_dict(checkpoint['model_state_dict'], strict=False)
-            print("✓ Model loaded with strict=False (some parameters ignored)")
-        except Exception as e2:
-            print(f"Alternative loading also failed: {e2}")
-            raise
+        raise
     
-    MODEL.eval()
-    
-    # Initialize simple feature engineer
+    # Initialize feature engineer
     try:
-        FEATURE_ENGINEER = SimpleFeatureEngineer()
+        FEATURE_ENGINEER = FeatureEngineering()
         print(f"✓ Feature engineer initialized")
     except Exception as e:
         print(f"ERROR initializing feature engineer: {e}")
@@ -231,23 +204,6 @@ def initialize_model():
     print(f"Test R²: {MODEL_CONFIG.get('test_metrics', {}).get('r2', 'N/A'):.3f}")
     print(f"Features: {MODEL_CONFIG.get('num_features', 'N/A')}")
     print(f"{'='*60}\n")
-
-def pm25_to_aqi(pm25):
-    """Convert PM2.5 to AQI using EPA formula"""
-    breakpoints = [
-        (0, 12, 0, 50),
-        (12.1, 35.4, 51, 100),
-        (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200),
-        (150.5, 250.4, 201, 300),
-        (250.5, 500.4, 301, 500),
-    ]
-    
-    for bp_lo, bp_hi, aqi_lo, aqi_hi in breakpoints:
-        if bp_lo <= pm25 <= bp_hi:
-            return ((aqi_hi - aqi_lo) / (bp_hi - bp_lo)) * (pm25 - bp_lo) + aqi_lo
-    
-    return 500  # Hazardous
 
 
 def get_health_category(aqi):
