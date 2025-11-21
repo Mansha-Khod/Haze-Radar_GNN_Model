@@ -1,5 +1,4 @@
 #!/bin/bash
-
 echo "=========================================="
 echo "HazeRadar Startup Script"
 echo "=========================================="
@@ -46,5 +45,11 @@ echo "Starting uvicorn on port $PORT..."
 echo "=========================================="
 echo ""
 
-# Start the application - PORT is now a proper number
-exec uvicorn backend_api:app --host 0.0.0.0 --port $PORT --log-level info
+# Start the application using Python to handle PORT
+exec python -c "
+import os
+import uvicorn
+
+port = int(os.getenv('PORT', 8000))
+uvicorn.run('main:app', host='0.0.0.0', port=port, log_level='info')
+"
