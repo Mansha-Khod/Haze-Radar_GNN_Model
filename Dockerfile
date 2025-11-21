@@ -34,9 +34,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Make startup script executable
-RUN chmod +x start.sh
-
 # Create models directory
 RUN mkdir -p models
 
@@ -49,7 +46,7 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Start application with startup script
-CMD ["./start.sh"]
+# Start application using Python script (most reliable)
+CMD ["python", "start.py"]
